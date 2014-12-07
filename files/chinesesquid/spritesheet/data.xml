@@ -1,0 +1,27 @@
+<spritesheet>
+    <filename>chinesesquid.png</filename>
+    <framewidth>24</framewidth>
+    <frameheight>32</frameheight>
+    <pivotx>0</pivotx>
+    <pivoty>0</pivoty>
+    <animation>
+        <name>up</name>
+        <beginframe>1</beginframe>
+        <endframe>3</endframe>
+    </animation>
+    <animation>
+        <name>right</name>
+        <beginframe>4</beginframe>
+        <endframe>6</endframe>
+    </animation>
+    <animation>
+        <name>down</name>
+        <beginframe>7</beginframe>
+        <endframe>9</endframe>
+    </animation>
+    <animation>
+        <name>left</name>
+        <beginframe>10</beginframe>
+        <endframe>12</endframe>
+    </animation>
+</spritesheet>
