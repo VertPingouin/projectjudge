@@ -1,20 +1,19 @@
 from gameobjects import GameObject
 from locals import Tags
-from extlib.gameobjects.vector2 import Vector2
-
-import pygame
 
 
+# todo do something flexible here, event driven ?
 class CollisionManager(GameObject):
     def __init__(self, d):
         GameObject.__init__(self, d, Tags.COLLISIONMANAGER, Tags.UPDATABLE)
 
     def update(self, tick):
-        physics = self._directory.get(Tags.PHYSIC)
 
-        for o1 in physics:
-            for o2 in physics:
-                if o1.rigidbody.collider.colliderect(o2.rigidbody.collider) and o1 != o2:
-                    o1.position.conform(o2)
-                    o1.rigidbody.rest()
+        squids = self._directory.get('squidleft')
+        blockers = self._directory.get(Tags.BLOCKER)
+
+        for o1 in squids:
+            for o2 in blockers:
+                if o1.rigidbody.collisionbox.colliderect(o2.rigidbody.collisionbox) and o1 != o2:
+                    o1.rigidbody.conform(o2)
 

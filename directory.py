@@ -6,7 +6,8 @@ class Directory:
         self.__con = sqlite3.connect(':memory:')
         self.__cur = self.__con.cursor()
 
-        self.__cur.execute('create table objects (id INTEGER PRIMARY KEY, x INTEGER, y INTEGER, z INTEGER)')
+        self.__cur.execute('create table objects '
+                           '(id INTEGER PRIMARY KEY, x INTEGER, y INTEGER, z INTEGER)')
         self.__cur.execute('create table tags (id INTEGER PRIMARY KEY, label STRING)')
         self.__cur.execute('create table objects_tags (object_id INTEGER, tag_id INTEGER, flag BOOLEAN)')
 
@@ -70,6 +71,7 @@ class Directory:
         self.__cur.execute('delete from tags where id not in (select tag_id from objects_tags)')
 
     def get(self, tag):
+        # todo allow to get by update order or draw order, find good way to do it
         self.__cur.execute(
             'select objects.id from objects \
             inner join objects_tags on objects_tags.object_id = objects.id \

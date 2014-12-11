@@ -1,4 +1,3 @@
-# todo implement direction as boolean (right = True, left = False)
 import pygame
 
 from locals import Tags
@@ -14,16 +13,22 @@ class GameObjectComponent:
         self.owner = owner
 
 
-class Collider(GameObjectComponent):
+class BoxCollider(GameObjectComponent):
     def __init__(self, owner, box):
         GameObjectComponent.__init__(self, owner)
-        self.box = box
+        self.__rectangle = box
+
+    @property
+    def rectangle(self):
+        return self.__rectangle
 
 
 class RigidBody(GameObjectComponent):
     def __init__(self, owner, mass=1.0, collider=None, lineardrag=1.0, gravityscale=1.0, iskinematic=False):
         GameObjectComponent.__init__(self, owner)
-        self. __mass = mass
+
+        self.__positioncomponent = owner.position
+        self.__mass = mass
         self.__lineardrag = lineardrag
         self.__gravityscale = gravityscale
         self.__iskinematic = iskinematic
@@ -34,25 +39,24 @@ class RigidBody(GameObjectComponent):
         self.__collider = collider
 
     @property
-    def iskinematic(self):
-        return self.__iskinematic
-
-    @property
     def cinetic(self):
         return self.__cinetic
 
     @property
-    def collider(self):
-        return self.__collider.box.move(self.owner.position.getposition()[0],
-                                        self.owner.position.getposition()[1])
+    def lineardrag(self):
+        return self.__lineardrag
+
+    @property
+    def collisionbox(self):
+        pos = self.__positioncomponent.getposition()
+        return self.__collider.rectangle.move(pos[0], pos[1])
 
     def update(self, tick):
         # apply gravity
-        if not self.__iskinematic and not self.__resting:
-            self.__cinetic += Parameters.GRAVITY * self.__gravityscale * tick
+        self.__cinetic += Parameters.GRAVITY * self.__gravityscale * tick
+        self.__cinetic.x *= self.__lineardrag
 
-            # apply friction
-            self.__cinetic.x *= self.__lineardrag
+        self.__positioncomponent._newposition(self.__positioncomponent.getposition() + self.__cinetic * tick)
 
     def push(self, vector):
         self.__cinetic += vector
@@ -62,20 +66,24 @@ class RigidBody(GameObjectComponent):
         self.__resting = True
         self.__physicstate = constants.STANDING
 
+    def conform(self, other):
+        # get a movable close to another instead of going through.
+        if self.collisionbox.top <= other.rigidbody.collisionbox.top <= self.collisionbox.bottom \
+                and not self.__iskinematic:
+            self.owner.position._setverticalposition(other.rigidbody.collisionbox.top - self.collisionbox.height)
+            self.__lineardrag = other.rigidbody.lineardrag
+            self.rest()
+
+        # todo left right and top  collisions
+        # todo make collisions send events
+
 
 class Position(GameObjectComponent):
-    def __init__(self, owner, position=Vector2(0, 0), rigidbody=None):
+    def __init__(self, owner, position=Vector2(0, 0)):
         GameObjectComponent.__init__(self, owner)
 
         self.__position = position
         self.__oldposition = position
-
-        self.__rigidbody = rigidbody
-
-    def update(self, tick):
-        # compute new position
-        self.__oldposition = self.__position.copy()
-        self.__position += self.__rigidbody.cinetic * tick
 
     def getrenderposition(self, betweenframe):
         lp = lerp(Vector2(self.__oldposition[0],
@@ -83,27 +91,22 @@ class Position(GameObjectComponent):
                   Vector2(self.__position[0],
                           self.__position[1]),
                   betweenframe)
+        lp[0] = int(lp[0])
+        lp[1] = int(lp[1])
         return lp
 
     def getposition(self):
         return self.__position
 
-    def conform(self, other):
-        # get a movable close to another instead of going through.
-        if self.__rigidbody.collider.top <= other.rigidbody.collider.top <= self.__rigidbody.collider.bottom \
-                and not self.__rigidbody.iskinematic:
-            self.__position.y = other.rigidbody.collider.top - self.__rigidbody.collider.height
+    def _newposition(self, position):
+        self.__oldposition = self.__position.copy()
+        self.__position = position
 
-        """
-        elif self.owner.physicbody.box.top >= blocker.physicbody.box.bottom >= self.owner.physicbody.box.bottom:
-            self.owner.physicbody.box.top = blocker.physicbody.box.bottom
+    def _setverticalposition(self, vposition):
+        self.__position.y = vposition
 
-        elif self.owner.physicbody.box.right >= blocker.physicbody.box.right >= self.owner.physicbody.box.left:
-            pass
-
-        elif self.owner.physicbody.box.right <= blocker.physicbody.box.left <= self.owner.physicbody.box.left:
-            self.owner.physicbody.box.right = blocker.physicbody.box.left
-        """
+    def _sethorizontalposition(self, hposition):
+        self.__position.x = hposition
 
 
 class GameObject:
@@ -151,13 +154,20 @@ class Squid(GameObject):
         self.__frame = frame
         self.__depth = depth
 
-        self.collider = Collider(self, pygame.Rect(0, 0, 24, 32))
-        self.rigidbody = RigidBody(owner=self, mass=1, collider=self.collider, lineardrag=0.8)
-        self.position = Position(owner=self, position=position,rigidbody= self.rigidbody)
+        self.position = Position(
+            owner=self,
+            position=position,
+        )
+
+        self.rigidbody = RigidBody(
+            owner=self,
+            mass=1,
+            collider=BoxCollider(owner=self, box=pygame.Rect(0, 0, 5, 22)),
+        )
 
     def update(self, tick):
         self.rigidbody.update(tick)
-        self.position.update(tick)
+
 
     @property
     def frame(self):
@@ -170,11 +180,20 @@ class Squid(GameObject):
 
 class Blocker(GameObject):
     def __init__(self, d, position, size, depth, *tags):
-        GameObject.__init__(self, d, Tags.PHYSIC, *tags)
+        GameObject.__init__(self, d, Tags.PHYSIC, Tags.BLOCKER, *tags)
 
         self.__depth = depth
 
-        self.collider = Collider(owner=self, box=pygame.Rect((0,0), size))
-        self.rigidbody = \
-            RigidBody(owner=self, mass=1.0, collider=self.collider, lineardrag=0, gravityscale=1.0, iskinematic=True)
-        self.position = Position(owner=self, position=position, rigidbody=self.rigidbody)
+        self.position = Position(
+            owner=self,
+            position=position,
+        )
+
+        self.rigidbody = RigidBody(
+            owner=self,
+            mass=1.0,
+            collider=BoxCollider(owner=self, box=pygame.Rect((0, 0), size)),
+            gravityscale=1.0,
+            lineardrag=0.95,
+            iskinematic=True
+        )
