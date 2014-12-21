@@ -17,14 +17,14 @@ class Directory:
         return self.__objectidDict[identifier]
 
     # tags operations
-    def _disabletag(self, obj, tag):
+    def disabletag(self, obj, tag):
         identifier = id(obj)
         self.__cur.execute(
             'update objects_tags set flag = 0 where tag_id in '
             '(select id from tags where label = "{}") and object_id = {}'.format(tag, identifier)
         )
 
-    def _enabletag(self, obj, tag):
+    def enabletag(self, obj, tag):
         identifier = id(obj)
         self.__cur.execute(
             'update objects_tags set flag = 1 where tag_id in '
@@ -100,7 +100,7 @@ class Directory:
 
         return result
 
-    def _get_nearest(self, obj, tag):
+    def get_nearest(self, obj, tag):
         posx = obj.position[0]
 
         self.__cur.execute(
@@ -119,7 +119,7 @@ class Directory:
 
         return result
 
-    def _get_tags(self, obj):
+    def get_tags(self, obj):
         identifier = id(obj)
 
         self.__cur.execute(
@@ -156,7 +156,7 @@ if __name__ == '__main__':
             self.directory.unregister(self)
 
         def get_nearest(self, tag):
-            return self.directory._get_nearest(self, tag)
+            return self.directory.get_nearest(self, tag)
 
     cat1 = MiniObject(d, (1, 1), 'Kitty', 'cat')
     dog1 = MiniObject(d, (-1, 1, 0), 'Snoopy', 'dog')

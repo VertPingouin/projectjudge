@@ -11,8 +11,9 @@ class Renderer(gameobjects.GameObject):
         gameobjects.GameObject.__init__(self, d, Tags.RENDERER)
 
         pygame.init()
-        #opengl.clear()
+
         pygame.display.set_mode(Parameters.SSIZE, Parameters.FLAGS)
+        opengl.clear()
 
     def draw(self, betweenframe):
         opengl.clear()

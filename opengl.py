@@ -32,7 +32,7 @@ def oglsize(pixsize, scenesize):
 
 
 def clear():
-    glClear( GL_COLOR_BUFFER_BIT)
+    glClear(GL_COLOR_BUFFER_BIT)
 
 
 def drawframe(frame, pos, siz, proj=True, r=1.0, g=1.0, b=1.0, alpha=1.0):

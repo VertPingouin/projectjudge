@@ -1,12 +1,14 @@
 from extlib.gameobjects.vector2 import Vector2
 import pygame
 
-GRAVITY = Vector2(0, 2000)
+GRAVITY = Vector2(0, 1500)
 
 GAMETICKS = 30
 AGAMETICKS = 2
 GAMESPEED = 1.0
-FPSLIMIT = 30
+FPSLIMIT = 0
+SPEEDCAP = 300 * GAMETICKS
+MINSPEED = 0.1
 
 REFHRES = Vector2(480, 270)
 _multiple = 2

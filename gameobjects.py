@@ -1,4 +1,5 @@
 import pygame
+import events
 
 from locals import Tags
 from locals import Parameters
@@ -24,11 +25,10 @@ class BoxCollider(GameObjectComponent):
 
 
 class RigidBody(GameObjectComponent):
-    def __init__(self, owner, mass=1.0, collider=None, lineardrag=1.0, gravityscale=1.0, iskinematic=False):
+    def __init__(self, owner, collider=None, lineardrag=1.0, gravityscale=1.0, iskinematic=False):
         GameObjectComponent.__init__(self, owner)
 
         self.__positioncomponent = owner.position
-        self.__mass = mass
         self.__lineardrag = lineardrag
         self.__gravityscale = gravityscale
         self.__iskinematic = iskinematic
@@ -37,6 +37,8 @@ class RigidBody(GameObjectComponent):
         self.__facing = constants.RIGHT
         self.__cinetic = Vector2(0, 0)
         self.__collider = collider
+
+        self.eventmanager = self.owner._directory.get_single(Tags.EVENTMANAGER)
 
     @property
     def cinetic(self):
@@ -52,30 +54,51 @@ class RigidBody(GameObjectComponent):
         return self.__collider.rectangle.move(pos[0], pos[1])
 
     def update(self, tick):
-        # apply gravity
-        self.__cinetic += Parameters.GRAVITY * self.__gravityscale * tick
-        self.__cinetic.x *= self.__lineardrag
+        if not self.__iskinematic:
+            # apply gravity
+            self.__cinetic += Parameters.GRAVITY * self.__gravityscale * tick
+            self.__cinetic.x *= self.__lineardrag
 
-        self.__positioncomponent._newposition(self.__positioncomponent.getposition() + self.__cinetic * tick)
+            self.__positioncomponent.newposition(self.__positioncomponent.getposition() + self.__cinetic * tick)
+
+        else:
+            self.__positioncomponent.newposition(self.__positioncomponent.getposition() + self.__cinetic * tick)
+
+        if self.__cinetic.length > Parameters.SPEEDCAP:
+            self.__cinetic.length = Parameters.SPEEDCAP
 
     def push(self, vector):
+        self.__resting = False
         self.__cinetic += vector
 
-    def rest(self):
+    def rest(self, on):
         self.__cinetic = Vector2(self.__cinetic.x, 0)
         self.__resting = True
-        self.__physicstate = constants.STANDING
+        if self.__physicstate == constants.FALLING:
+            self.__physicstate = constants.STANDING
+            self.eventmanager.post(events.Event(events.EventTypes.E_PHYSIC_COLLIDE_PHYSIC, gameobjects=(self.owner, on)))
 
     def conform(self, other):
         # get a movable close to another instead of going through.
-        if self.collisionbox.top <= other.rigidbody.collisionbox.top <= self.collisionbox.bottom \
-                and not self.__iskinematic:
-            self.owner.position._setverticalposition(other.rigidbody.collisionbox.top - self.collisionbox.height)
-            self.__lineardrag = other.rigidbody.lineardrag
-            self.rest()
+        if not self.__iskinematic:
+            if self.collisionbox.bottom > other.rigidbody.collisionbox.top > self.collisionbox.top:
+                self.__positioncomponent.setverticalposition(other.rigidbody.collisionbox.top
+                                                             - self.collisionbox.height)
+                self.__lineardrag = other.rigidbody.lineardrag
+                self.rest(on=other)
 
-        # todo left right and top  collisions
-        # todo make collisions send events
+            elif self.collisionbox.top < other.rigidbody.collisionbox.bottom < self.collisionbox.bottom:
+                self.__positioncomponent.setverticalposition(other.rigidbody.collisionbox.bottom)
+                self.cinetic.y = 0
+
+            elif self.collisionbox.right > other.rigidbody.collisionbox.left and self.cinetic.x > 0:
+                self.__positioncomponent.sethorizontalposition(other.rigidbody.collisionbox.left
+                                                               - self.collisionbox.width)
+                self.cinetic.x = 0
+
+            elif self.collisionbox.left < other.rigidbody.collisionbox.right and self.cinetic.x < 0:
+                self.__positioncomponent.sethorizontalposition(other.rigidbody.collisionbox.right)
+                self.cinetic.x = 0
 
 
 class Position(GameObjectComponent):
@@ -98,14 +121,14 @@ class Position(GameObjectComponent):
     def getposition(self):
         return self.__position
 
-    def _newposition(self, position):
+    def newposition(self, position):
         self.__oldposition = self.__position.copy()
         self.__position = position
 
-    def _setverticalposition(self, vposition):
+    def setverticalposition(self, vposition):
         self.__position.y = vposition
 
-    def _sethorizontalposition(self, hposition):
+    def sethorizontalposition(self, hposition):
         self.__position.x = hposition
 
 
@@ -126,25 +149,82 @@ class GameObject:
 
     # tags operations
     def removetag(self, tag):
-        tags = self._directory._get_tags(self)
+        tags = self._directory.get_tags(self)
         tags.remove(tag)
         self._directory.unregister(self)
         self._directory.register(self, *tags)
 
     def addtag(self, tag):
-        tags = self._directory._get_tags(self)
+        tags = self._directory.get_tags(self)
         tags.append(tag)
         self._directory.unregister(self)
         self._directory.register(self, *tags)
 
     def disabletag(self, tag):
-        self._directory._disabletag(self, tag)
+        self._directory.disabletag(self, tag)
 
     def enabletag(self, tag):
-        self._directory._enabletag(self, tag)
+        self._directory.enabletag(self, tag)
 
     def setdepth(self, depth):
-        self._directory._setdepth(self, depth)
+        self._directory.setdepth(self, depth)
+
+
+class EventManager(events.EventHandler, GameObject):
+    """
+    An event manager is a EventHandler that handle events by broadcasting them to other event handlers.
+    It has no owner and as it has no owner it should be registered within a directory.
+    """
+
+    def __init__(self, directory):
+        events.EventHandler.__init__(self)
+        GameObject.__init__(self, directory, Tags.EVENTMANAGER, Tags.UPDATABLE)
+
+        self.__listeners = {}
+        self.__knownhandlers = []
+        self._queue = []
+
+        for item in events.EventTypes.__dict__.items():
+            if events.EventTypes.validEventName.match(item[0]):
+                self.__listeners[item[1]] = []
+
+    def update(self, tick):
+        # brodcast events to handlers
+        while self._queue:
+            self.__handle(self._queue.pop())
+
+        # empty queue
+        self._queue = []
+
+    def post(self, event):
+        print event
+        events.EventHandler.post(self, event)
+
+    def __handle(self, evt):
+        # if a handler's owner is in event's argument, we post the event to it
+        for handler in self.__knownhandlers:
+            if handler.owner in evt.arguments.values():
+                handler.post(evt)
+
+        # if a handler subscribed to the event type, we post the event to it
+        for listener in self.__listeners[evt.type]:
+            listener.post(evt)
+
+    def subscribe(self, handler, eventtype=None):
+        # if no eventtype is indicated, we'll send event concerning handler's owner
+        if eventtype:
+            self.__listeners[eventtype].append(handler)
+        else:
+            self.__knownhandlers.append(handler)
+
+    def unsubscribe(self, handler, eventtype=None):
+        if eventtype:
+            try:
+                self.__listeners[eventtype].remove(handler)
+            except ValueError:
+                return False
+        else:
+            self.__knownhandlers.remove(handler)
 
 
 class Squid(GameObject):
@@ -161,8 +241,7 @@ class Squid(GameObject):
 
         self.rigidbody = RigidBody(
             owner=self,
-            mass=1,
-            collider=BoxCollider(owner=self, box=pygame.Rect(0, 0, 5, 22)),
+            collider=BoxCollider(owner=self, box=pygame.Rect(0, 0, 24, 32)),
         )
 
     def update(self, tick):
@@ -191,7 +270,6 @@ class Blocker(GameObject):
 
         self.rigidbody = RigidBody(
             owner=self,
-            mass=1.0,
             collider=BoxCollider(owner=self, box=pygame.Rect((0, 0), size)),
             gravityscale=1.0,
             lineardrag=0.95,
