@@ -138,7 +138,7 @@ class Directory:
 
 
 if __name__ == '__main__':
-    from extlib.gameobjects.gametime import GameClock
+    from externallibs.gameobjects.gametime import GameClock
 
     clock = GameClock()
     clock.start()

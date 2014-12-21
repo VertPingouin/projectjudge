@@ -1,14 +1,15 @@
 from locals import Parameters
 from locals import Tags
 
+from gameobjects.gameobjects import *
+
 import pygame
-import gameobjects
 import opengl
 
 
-class Renderer(gameobjects.GameObject):
+class Renderer(GameObject):
     def __init__(self, d):
-        gameobjects.GameObject.__init__(self, d, Tags.RENDERER)
+        GameObject.__init__(self, d, Tags.RENDERER)
 
         pygame.init()
 

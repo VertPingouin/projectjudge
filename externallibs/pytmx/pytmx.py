@@ -427,7 +427,7 @@ class TiledTileset(TiledElement):
         tiles as a dict
 
         a bit of mangling is done here so that tilesets that have external
-        TSX files appear the same as those that don't
+        TSX ressourcesfiles appear the same as those that don't
         """
         import os
 

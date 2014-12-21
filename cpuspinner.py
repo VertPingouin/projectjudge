@@ -1,6 +1,6 @@
 from locals import Tags
 
-from extlib.gameobjects.gametime import GameClock
+from externallibs.gameobjects.gametime import GameClock
 from pygame.time import Clock
 
 from locals import Parameters

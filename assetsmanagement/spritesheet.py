@@ -1,5 +1,5 @@
 from xml.etree import ElementTree
-from extlib.gameobjects.vector2 import Vector2
+from externallibs.gameobjects.vector2 import Vector2
 
 from asset import Asset
 import pygame

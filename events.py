@@ -3,8 +3,6 @@ This module provides tools to generate, send and handle events of different type
 """
 
 import re
-import gameobjects
-from locals import Tags
 from locals import EngineError
 
 

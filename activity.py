@@ -1,4 +1,4 @@
-from extlib.gameobjects.gametime import GameClock
+from externallibs.gameobjects.gametime import GameClock
 from events import EventHandler
 
 class Activity(EventHandler):

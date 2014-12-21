@@ -3,7 +3,7 @@ from locals import EngineError
 
 class Asset:
     """
-    This is the base class for all assets
+    This is the base class for all assetsmanagement
     """
     @staticmethod
     def _missingasset(self):

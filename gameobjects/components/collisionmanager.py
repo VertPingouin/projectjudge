@@ -1,8 +1,6 @@
-from gameobjects import GameObject
-from locals import Tags
+from gameobjects.gameobjects import *
 
 
-# todo do something flexible here, event driven ?
 class CollisionManager(GameObject):
     def __init__(self, d):
         GameObject.__init__(self, d, Tags.COLLISIONMANAGER, Tags.UPDATABLE)

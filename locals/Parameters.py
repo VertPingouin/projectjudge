@@ -1,4 +1,4 @@
-from extlib.gameobjects.vector2 import Vector2
+from externallibs.gameobjects.vector2 import Vector2
 import pygame
 
 GRAVITY = Vector2(0, 1500)
